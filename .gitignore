@@ -1,3 +1,5 @@
 test.ipynb
-/__pychache__
+__pycache__/
 /.ipynb_checkpoints
+enc_cookies.json
+instrument_file.csv
