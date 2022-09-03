@@ -1,5 +1,6 @@
 test.ipynb
 __pycache__/
 /.ipynb_checkpoints
-enc_cookies.json
+enc_cookies.text
 instrument_file.csv
+login_credential.json
