@@ -15,7 +15,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 ctypes.windll.kernel32.SetConsoleTitleW('INITIALING ... ')
 
 class login:
-
+    
     def __init__(self, maximize=True, sleep_time=3, download_instrument=True):
         """
         Login Account and save Credential and Download Latest Intrument for Trade
@@ -25,7 +25,6 @@ class login:
             credential = {
                 "user_id":"",
                 "password":"",
-                "pin":"",
                 "totp_key":""
             }
         else:
@@ -33,7 +32,6 @@ class login:
 
         user_id = credential['user_id']
         password = credential['password']
-        pin = credential['pin']
         totp_key = credential['totp_key']
 
         opts = Options()
@@ -66,24 +64,17 @@ class login:
             driver.find_element(By.XPATH, "//button[normalize-space()='Login']").click()
 
             try:
-                try:
-                    pin_element = driver.find_element(By.XPATH, "//input[@id='pin']")
+                sleep(3)
+                totp_element = driver.find_element(By.XPATH, "//input[@type='text']")
 
-                    if pin == "":
-                        pin = pwinput.pwinput(prompt='PIN : ', mask='X')
-                    pin_element.send_keys(pin)
+                if totp_key == "":
+                    totp = input('Enter TOTP/App Code : ')
+                else:
+                    totp = pyotp.TOTP(totp_key).now()
 
-                except:
-                    totp_element = driver.find_element(By.XPATH, "//input[@id='totp']")
-
-                    if totp_key == "":
-                        totp = input('Enter TOTP : ')
-                    else:
-                        totp = pyotp.TOTP(totp_key).now()
-
-                    totp_element.send_keys(totp)
+                totp_element.send_keys(totp)
             except:
-                user_id, password, pin = "", "", "", ""
+                user_id, password = "", ""
                 print('Wrong USER ID AND PASSWORD Try AGAIN !!!')
                 sleep(3)
                 continue
@@ -101,7 +92,6 @@ class login:
         credential = {
             "user_id":user_id,
             "password":password,
-            "pin":pin,
             "totp_key":totp_key
         }
 
