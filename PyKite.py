@@ -131,12 +131,13 @@ class pykite:
         orders = "/orders"
         trades = "/trades"
 
-    #     "order.info": "/orders/{order_id}",
-    #     "order.place": "/orders/{variety}",
-    #     "order.modify": "/orders/{variety}/{order_id}",
-    #     "order.cancel": "/orders/{variety}/{order_id}",
-    #     "order.trades": "/orders/{order_id}/trades",
-    #
+        order_info = "/orders/{order_id}"
+        order_trades = "/orders/{order_id}/trades"
+
+        order_place = "/orders/{variety}"
+        order_modify = "/orders/{variety}/{order_id}"
+        order_cancel = "/orders/{variety}/{order_id}"
+
     #     "portfolio.positions": "/portfolio/positions",
     #     "portfolio.holdings": "/portfolio/holdings",
     #     "portfolio.holdings.auction": "/portfolio/holdings/auctions",
@@ -256,3 +257,115 @@ class pykite:
 
         response = self.session.get(f"{self.root_url}/quote/ohlc", params={"i": ins}, headers=self.header).json()
         return response
+
+    # orderbook and tradebook
+    def orders(self):
+        """Get list of orders."""
+        response = self.session.get(f"{self.root_url}{self.urls.orders}", headers=self.header).json()
+        return response
+
+    def trades(self):
+        """
+        Retrieve the list of trades executed (all or ones under a particular order).
+
+        An order can be executed in tranches based on market conditions.
+        These trades are individually recorded under an order.
+        """
+        response = self.session.get(f"{self.root_url}{self.urls.trades}", headers=self.header).json()
+        return response
+
+    def order_history(self, order_id):
+        """
+        Get history of individual order.
+        """
+        response = self.session.get(f"{self.root_url}{self.urls.order_info.format(order_id=order_id)}", headers=self.header).json()
+        return response
+
+    def order_trades(self, order_id):
+        """
+        Retrieve the list of trades executed for a particular order.
+        """
+        response = self.session.get(f"{self.root_url}{self.urls.order_trades.format(order_id=order_id)}", headers=self.header).json()
+        return response
+
+        # orders
+    def place_order(self,
+                    variety,
+                    exchange,
+                    tradingsymbol,
+                    transaction_type,
+                    quantity,
+                    product,
+                    order_type,
+                    price=None,
+                    validity=None,
+                    validity_ttl=None,
+                    disclosed_quantity=None,
+                    trigger_price=None,
+                    iceberg_legs=None,
+                    iceberg_quantity=None,
+                    auction_number=None,
+                    tag=None):
+        """Place an order."""
+        params = locals()
+        del (params["self"])
+
+        for k in list(params.keys()):
+            if params[k] is None:
+                del (params[k])
+
+        return self._post("order.place",
+                          url_args={"variety": variety},
+                          params=params)["order_id"]
+        #
+        # def modify_order(self,
+        #                  variety,
+        #                  order_id,
+        #                  parent_order_id=None,
+        #                  quantity=None,
+        #                  price=None,
+        #                  order_type=None,
+        #                  trigger_price=None,
+        #                  validity=None,
+        #                  disclosed_quantity=None):
+        #     """Modify an open order."""
+        #     params = locals()
+        #     del (params["self"])
+        #
+        #     for k in list(params.keys()):
+        #         if params[k] is None:
+        #             del (params[k])
+        #
+        #     return self._put("order.modify",
+        #                      url_args={"variety": variety, "order_id": order_id},
+        #                      params=params)["order_id"]
+        #
+        # def cancel_order(self, variety, order_id, parent_order_id=None):
+        #     """Cancel an order."""
+        #     return self._delete("order.cancel",
+        #                         url_args={"variety": variety, "order_id": order_id},
+        #                         params={"parent_order_id": parent_order_id})["order_id"]
+        #
+        # def exit_order(self, variety, order_id, parent_order_id=None):
+        #     """Exit a CO order."""
+        #     return self.cancel_order(variety, order_id, parent_order_id=parent_order_id)
+        #
+        # def _format_response(self, data):
+        #     """Parse and format responses."""
+        #
+        #     if type(data) == list:
+        #         _list = data
+        #     elif type(data) == dict:
+        #         _list = [data]
+        #
+        #     for item in _list:
+        #         # Convert date time string to datetime object
+        #         for field in ["order_timestamp", "exchange_timestamp", "created", "last_instalment", "fill_timestamp",
+        #                       "timestamp", "last_trade_time"]:
+        #             if item.get(field) and len(item[field]) == 19:
+        #                 item[field] = dateutil.parser.parse(item[field])
+        #
+        #     return _list[0] if type(data) == dict else _list
+
+
+
