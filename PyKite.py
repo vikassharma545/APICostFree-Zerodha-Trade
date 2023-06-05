@@ -15,7 +15,6 @@ try:
 except:
     os.system("pip install pandas")
 
-
 def get_enctoken(userid, password, twofa, key_type):
     session = requests.session()
 
@@ -47,10 +46,8 @@ def get_enctoken(userid, password, twofa, key_type):
     else:
         raise Exception("Invalid detail. !!!")
 
-
 def generate_totp(totp_key):
     return pyotp.TOTP(totp_key).now()
-
 
 class pykite:
     """
@@ -138,47 +135,45 @@ class pykite:
         order_modify = "/orders/{variety}/{order_id}"
         order_cancel = "/orders/{variety}/{order_id}"
 
-    #     "portfolio.positions": "/portfolio/positions",
-    #     "portfolio.holdings": "/portfolio/holdings",
-    #     "portfolio.holdings.auction": "/portfolio/holdings/auctions",
-    #     "portfolio.positions.convert": "/portfolio/positions",
-    #
-    #     # MF api endpoints
-    #     "mf.orders": "/mf/orders",
-    #     "mf.order.info": "/mf/orders/{order_id}",
-    #     "mf.order.place": "/mf/orders",
-    #     "mf.order.cancel": "/mf/orders/{order_id}",
-    #
-    #     "mf.sips": "/mf/sips",
-    #     "mf.sip.info": "/mf/sips/{sip_id}",
-    #     "mf.sip.place": "/mf/sips",
-    #     "mf.sip.modify": "/mf/sips/{sip_id}",
-    #     "mf.sip.cancel": "/mf/sips/{sip_id}",
-    #
-    #     "mf.holdings": "/mf/holdings",
-    #     "mf.instruments": "/mf/instruments",
-    #
-    #     "market.instruments.all": "/instruments",
-    #     "market.instruments": "/instruments/{exchange}",
-    #     "market.margins": "/margins/{segment}",
-    #     "market.historical": "/instruments/historical/{instrument_token}/{interval}",
-    #     "market.trigger_range": "/instruments/trigger_range/{transaction_type}",
-    #
-    #     "market.quote": "/quote",
-    #     "market.quote.ohlc": "/quote/ohlc",
-    #     "market.quote.ltp": "/quote/ltp",
-    #
-    #     # GTT endpoints
-    #     "gtt": "/gtt/triggers",
-    #     "gtt.place": "/gtt/triggers",
-    #     "gtt.info": "/gtt/triggers/{trigger_id}",
-    #     "gtt.modify": "/gtt/triggers/{trigger_id}",
-    #     "gtt.delete": "/gtt/triggers/{trigger_id}",
-    #
-    #     # Margin computation endpoints
-    #     "order.margins": "/margins/orders",
-    #     "order.margins.basket": "/margins/basket"
-    # }
+        portfolio_positions = "/portfolio/positions"
+        portfolio_holdings = "/portfolio/holdings"
+        portfolio_holdings_auction = "/portfolio/holdings/auctions"
+        portfolio_positions_convert = "/portfolio/positions"
+
+        # market_instruments_all = "/instruments"
+        # market_instruments = "/instruments/{exchange}"
+        # market_margins = "/margins/{segment}"
+        # market_historical = "/instruments/historical/{instrument_token}/{interval}"
+        # market_trigger_range = "/instruments/trigger_range/{transaction_type}"
+
+        # market_quote = "/quote"
+        # market_quote_ohlc = "/quote/ohlc"
+        # market_quote_ltp = "/quote/ltp"
+        #
+        # # Margin computation endpoints
+        # order_margins = "/margins/orders"
+        # order_margins.basket = "/margins/basket"
+
+        # GTT endpoints
+        # gtt = "/gtt/triggers"
+        # gtt_place = "/gtt/triggers"
+        # gtt_info = "/gtt/triggers/{trigger_id}"
+        # gtt_modify = "/gtt/triggers/{trigger_id}"
+        # gtt_delete = "/gtt/triggers/{trigger_id}"
+
+        # mf_orders = "/mf/orders"
+        # mf_order.info = "/mf/orders/{order_id}"
+        # mf_order.place = "/mf/orders"
+        # mf_order.cancel = "/mf/orders/{order_id}"
+
+        # mf_sips = "/mf/sips"
+        # mf_sip.info = "/mf/sips/{sip_id}"
+        # mf_sip.place = "/mf/sips"
+        # mf_sip.modify = "/mf/sips/{sip_id}"
+        # mf_sip.cancel = "/mf/sips/{sip_id}"
+
+        # mf_holdings = "/mf/holdings"
+        # mf_instruments = "/mf/instruments"
 
     def __init__(self, userid, password, twofa, key_type="totp"):
         """
@@ -314,58 +309,34 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        return self._post("order.place",
-                          url_args={"variety": variety},
-                          params=params)["order_id"]
-        #
-        # def modify_order(self,
-        #                  variety,
-        #                  order_id,
-        #                  parent_order_id=None,
-        #                  quantity=None,
-        #                  price=None,
-        #                  order_type=None,
-        #                  trigger_price=None,
-        #                  validity=None,
-        #                  disclosed_quantity=None):
-        #     """Modify an open order."""
-        #     params = locals()
-        #     del (params["self"])
-        #
-        #     for k in list(params.keys()):
-        #         if params[k] is None:
-        #             del (params[k])
-        #
-        #     return self._put("order.modify",
-        #                      url_args={"variety": variety, "order_id": order_id},
-        #                      params=params)["order_id"]
-        #
-        # def cancel_order(self, variety, order_id, parent_order_id=None):
-        #     """Cancel an order."""
-        #     return self._delete("order.cancel",
-        #                         url_args={"variety": variety, "order_id": order_id},
-        #                         params={"parent_order_id": parent_order_id})["order_id"]
-        #
-        # def exit_order(self, variety, order_id, parent_order_id=None):
-        #     """Exit a CO order."""
-        #     return self.cancel_order(variety, order_id, parent_order_id=parent_order_id)
-        #
-        # def _format_response(self, data):
-        #     """Parse and format responses."""
-        #
-        #     if type(data) == list:
-        #         _list = data
-        #     elif type(data) == dict:
-        #         _list = [data]
-        #
-        #     for item in _list:
-        #         # Convert date time string to datetime object
-        #         for field in ["order_timestamp", "exchange_timestamp", "created", "last_instalment", "fill_timestamp",
-        #                       "timestamp", "last_trade_time"]:
-        #             if item.get(field) and len(item[field]) == 19:
-        #                 item[field] = dateutil.parser.parse(item[field])
-        #
-        #     return _list[0] if type(data) == dict else _list
+        return self.session.post(f"{self.root_url}{self.urls.order_place.format(variety = variety)}", data=params, headers=self.header)
 
+    def modify_order(self,
+                     variety,
+                     order_id,
+                     parent_order_id=None,
+                     quantity=None,
+                     price=None,
+                     order_type=None,
+                     trigger_price=None,
+                     validity=None,
+                     disclosed_quantity=None):
 
+        """Modify an open order."""
+        params = locals()
+        del (params["self"])
 
+        for k in list(params.keys()):
+            if params[k] is None:
+                del (params[k])
+
+        return self.session.post(f"{self.root_url}{self.urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
+
+    def cancel_order(self, variety, order_id, parent_order_id=None):
+        """Cancel an order."""
+        params = {"parent_order_id": parent_order_id}
+        return self.session.post(f"{self.root_url}{self.urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
+
+    def exit_order(self, variety, order_id, parent_order_id=None):
+        """Exit a CO order."""
+        return self.cancel_order(variety, order_id, parent_order_id=parent_order_id)
