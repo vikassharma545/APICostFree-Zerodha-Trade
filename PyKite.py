@@ -15,40 +15,6 @@ try:
 except:
     os.system("pip install pandas")
 
-def get_enctoken(userid, password, twofa, key_type):
-    session = requests.session()
-
-    # login
-    data = {"user_id": userid, "password": password}
-    response = session.post('https://kite.zerodha.com/api/login', data=data)
-    if response.status_code != 200:
-        raise Exception(response.json())
-
-    # verify twofa
-    if key_type == "totpkey":
-        twofa = generate_totp(twofa)
-
-    data = {
-        "request_id": response.json()['data']['request_id'],
-        "twofa_value": twofa,
-        "user_id": response.json()['data']['user_id']
-    }
-
-    response = session.post('https://kite.zerodha.com/api/twofa', data=data)
-
-    if response.status_code != 200:
-        raise Exception(response.json())
-
-    enctoken = response.cookies.get('enctoken')
-
-    if enctoken:
-        return enctoken
-    else:
-        raise Exception("Invalid detail. !!!")
-
-def generate_totp(totp_key):
-    return pyotp.TOTP(totp_key).now()
-
 class pykite:
     """
     The Pykite wrapper class.
@@ -106,19 +72,6 @@ class pykite:
     STATUS_REJECTED = "REJECTED"
     STATUS_CANCELLED = "CANCELLED"
 
-    # GTT order type
-    GTT_TYPE_OCO = "two-leg"
-    GTT_TYPE_SINGLE = "single"
-
-    # GTT order status
-    GTT_STATUS_ACTIVE = "active"
-    GTT_STATUS_TRIGGERED = "triggered"
-    GTT_STATUS_DISABLED = "disabled"
-    GTT_STATUS_EXPIRED = "expired"
-    GTT_STATUS_CANCELLED = "cancelled"
-    GTT_STATUS_REJECTED = "rejected"
-    GTT_STATUS_DELETED = "deleted"
-
     class __urls:
 
         user_profile = "/user/profile"
@@ -140,40 +93,20 @@ class pykite:
         portfolio_holdings_auction = "/portfolio/holdings/auctions"
         portfolio_positions_convert = "/portfolio/positions"
 
-        # market_instruments_all = "/instruments"
-        # market_instruments = "/instruments/{exchange}"
-        # market_margins = "/margins/{segment}"
-        # market_historical = "/instruments/historical/{instrument_token}/{interval}"
-        # market_trigger_range = "/instruments/trigger_range/{transaction_type}"
+        market_quote = "/quote"
+        market_quote_ohlc = "/quote/ohlc"
+        market_quote_ltp = "/quote/ltp"
 
-        # market_quote = "/quote"
-        # market_quote_ohlc = "/quote/ohlc"
-        # market_quote_ltp = "/quote/ltp"
-        #
-        # # Margin computation endpoints
-        # order_margins = "/margins/orders"
-        # order_margins.basket = "/margins/basket"
+        # Margin computation endpoints
+        order_margins = "/margins/orders"
+        order_margins_basket = "/margins/basket"
+        market_margins = "/margins/{segment}"
 
-        # GTT endpoints
-        # gtt = "/gtt/triggers"
-        # gtt_place = "/gtt/triggers"
-        # gtt_info = "/gtt/triggers/{trigger_id}"
-        # gtt_modify = "/gtt/triggers/{trigger_id}"
-        # gtt_delete = "/gtt/triggers/{trigger_id}"
+        # Historical data
+        class interval:
+            pass
 
-        # mf_orders = "/mf/orders"
-        # mf_order.info = "/mf/orders/{order_id}"
-        # mf_order.place = "/mf/orders"
-        # mf_order.cancel = "/mf/orders/{order_id}"
-
-        # mf_sips = "/mf/sips"
-        # mf_sip.info = "/mf/sips/{sip_id}"
-        # mf_sip.place = "/mf/sips"
-        # mf_sip.modify = "/mf/sips/{sip_id}"
-        # mf_sip.cancel = "/mf/sips/{sip_id}"
-
-        # mf_holdings = "/mf/holdings"
-        # mf_instruments = "/mf/instruments"
+        market_historical = "/instruments/historical/{instrument_token}/{interval}"
 
     def __init__(self, userid, password, twofa, key_type="totp"):
         """
@@ -185,13 +118,38 @@ class pykite:
         :param key_type: {'totp','pin','totpkey'}, default 'totp'
         """
 
-        self.enctoken = get_enctoken(userid, password, twofa, key_type)
         self.session = requests.session()
-        self.login_url = "https://kite.zerodha.com/api"
+        self._login_url = "https://kite.zerodha.com/api"
+
+        # login
+        data = {"user_id": userid, "password": password}
+        response = self.session.post(f"{self._login_url}/login", data=data)
+        if response.status_code != 200:
+            raise Exception(response.json())
+
+        # verify twofa
+        if key_type == "totpkey":
+            twofa = pyotp.TOTP(twofa).now()
+
+        data = {
+            "request_id": response.json()['data']['request_id'],
+            "twofa_value": twofa,
+            "user_id": response.json()['data']['user_id']
+        }
+
+        response = self.session.post(f"{self._login_url}/twofa", data=data)
+
+        if response.status_code != 200:
+            raise Exception(response.json())
+
+        self.enctoken = response.cookies.get('enctoken')
+
+        if self.enctoken is None:
+            raise Exception("Invalid detail. !!!")
+
         self.root_url = "https://api.kite.trade"
         self.header = {"Authorization": f"enctoken {self.enctoken}"}
         self.urls = self.__urls()
-
     def profile(self):
         response = self.session.get(f"{self.root_url}{self.urls.user_profile}", headers=self.header).json()
         return response
@@ -202,55 +160,6 @@ class pykite:
             response = self.session.get(f"{self.root_url}{self.urls.user_margins_segment.format(segment=segment)}", headers=self.header).json()
         else:
             response = self.session.get(f"{self.root_url}{self.urls.user_margins}", headers=self.header).json()
-
-        return response
-
-    def instruments(self, exchange=None, download=False, download_path=""):
-        instruments = pd.read_csv("https://api.kite.trade/instruments")
-
-        if download:
-            instruments.to_csv(download_path)
-
-        if exchange:
-            instruments = instruments[instruments['exchange'] == exchange].reset_index(drop=True)
-
-        return instruments
-
-    def quotes(self, instruments):
-        """
-        Retrieve quote for list of instruments.
-
-        - `instruments` is a list of instruments, Instrument are in the format of `exchange:tradingsymbol`. For example NSE:INFY
-        """
-        ins = list(instruments)
-
-        # If first element is a list then accept it as instruments list for legacy reason
-        if len(instruments) > 0 and type(instruments[0]) == list:
-            ins = instruments[0]
-
-        response = self.session.get(f"{self.root_url}/quote", params={"i": ins}, headers=self.header).json()
-        return response
-
-    def ltp(self, instruments):
-
-        ins = list(instruments)
-
-        # If first element is a list then accept it as instruments list for legacy reason
-        if len(instruments) > 0 and type(instruments[0]) == list:
-            ins = instruments[0]
-
-        response = self.session.get(f"{self.root_url}/quote/ltp", params={"i": ins}, headers=self.header).json()
-        return response
-
-    def ohlc(self, instruments):
-
-        ins = list(instruments)
-
-        # If first element is a list then accept it as instruments list for legacy reason
-        if len(instruments) > 0 and type(instruments[0]) == list:
-            ins = instruments[0]
-
-        response = self.session.get(f"{self.root_url}/quote/ohlc", params={"i": ins}, headers=self.header).json()
         return response
 
     # orderbook and tradebook
@@ -283,7 +192,6 @@ class pykite:
         response = self.session.get(f"{self.root_url}{self.urls.order_trades.format(order_id=order_id)}", headers=self.header).json()
         return response
 
-        # orders
     def place_order(self,
                     variety,
                     exchange,
@@ -330,13 +238,107 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        return self.session.post(f"{self.root_url}{self.urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
+        return self.session.put(f"{self.root_url}{self.urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
 
     def cancel_order(self, variety, order_id, parent_order_id=None):
         """Cancel an order."""
         params = {"parent_order_id": parent_order_id}
-        return self.session.post(f"{self.root_url}{self.urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
+        return self.session.delete(f"{self.root_url}{self.urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
 
-    def exit_order(self, variety, order_id, parent_order_id=None):
-        """Exit a CO order."""
-        return self.cancel_order(variety, order_id, parent_order_id=parent_order_id)
+    def positions(self):
+        """Retrieve the list of positions."""
+        response = self.session.get(f"{self.root_url}{self.urls.portfolio_positions}", headers=self.header).json()
+        return response
+    def holdings(self):
+        """Retrieve the list of equity holdings."""
+        response = self.session.get(f"{self.root_url}{self.urls.portfolio_holdings}", headers=self.header).json()
+        return response
+
+    def get_auction_instruments(self):
+        response = self.session.get(f"{self.root_url}{self.urls.portfolio_holdings_auction}", headers=self.header).json()
+        return response
+
+    def convert_position(self,
+                         exchange,
+                         tradingsymbol,
+                         transaction_type,
+                         position_type,
+                         quantity,
+                         old_product,
+                         new_product):
+
+        params = locals()
+        del (params["self"])
+
+        """Modify an open position's product type."""
+        response = self.session.put(f"{self.root_url}{self.urls.portfolio_positions_convert}", params=params, headers=self.header)
+        return response
+
+    def instruments(self, exchange=None, download=False, download_path=""):
+        instruments = pd.read_csv("https://api.kite.trade/instruments")
+
+        if download:
+            instruments.to_csv(download_path)
+
+        if exchange:
+            instruments = instruments[instruments['exchange'] == exchange].reset_index(drop=True)
+
+        return instruments
+
+    def quotes(self, instruments):
+        """
+        Retrieve quote for list of instruments.
+
+        - `instruments` is a list of instruments, Instrument are in the format of `exchange:tradingsymbol`. For example NSE:INFY
+        """
+        ins = list(instruments)
+
+        # If first element is a list then accept it as instruments list for legacy reason
+        if len(instruments) > 0 and type(instruments[0]) == list:
+            ins = instruments[0]
+
+        response = self.session.get(f"{self.root_url}{self.urls.market_quote}", params={"i": ins}, headers=self.header).json()
+        return response
+
+    def ohlc(self, instruments):
+
+        ins = list(instruments)
+
+        # If first element is a list then accept it as instruments list for legacy reason
+        if len(instruments) > 0 and type(instruments[0]) == list:
+            ins = instruments[0]
+
+        response = self.session.get(f"{self.root_url}{self.urls.market_quote_ohlc}", params={"i": ins}, headers=self.header).json()
+        return response
+
+    def ltp(self, instruments):
+
+        ins = list(instruments)
+
+        # If first element is a list then accept it as instruments list for legacy reason
+        if len(instruments) > 0 and type(instruments[0]) == list:
+            ins = instruments[0]
+
+        response = self.session.get(f"{self.root_url}{self.urls.market_quote_ltp}", params={"i": ins}, headers=self.header).json()
+        return response
+
+    # def order_margins(self, list_of_orders):
+    #     """
+    #     Calculate margins for requested order list considering the existing positions and open orders
+    #
+    #     - `params` is list of orders to retrive margins detail
+    #     """
+    #     response = self.session.post(f"{self.root_url}{self.urls.order_margins}", data=list_of_orders, headers=self.header)
+    #     return response
+    #
+    # def basket_order_margins(self, params, consider_positions=True, mode=None):
+    #     """
+    #     Calculate total margins required for basket of orders including margin benefits
+    #
+    #     - `params` is list of orders to fetch basket margin
+    #     - `consider_positions` is a boolean to consider users positions
+    #     - `mode` is margin response mode type. compact - Compact mode will only give the total margins
+    #     """
+    #     data = {'consider_positions': consider_positions, 'mode': mode}
+    #     response = self.session.post(f"{self.root_url}{self.urls.order_margins_basket}", data=data, params=params, headers=self.header)
+    #     return response
