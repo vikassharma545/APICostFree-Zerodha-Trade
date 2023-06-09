@@ -1,4 +1,5 @@
 import os
+import json
 
 try:
     import requests
@@ -91,7 +92,7 @@ class pykite:
         portfolio_positions = "/portfolio/positions"
         portfolio_holdings = "/portfolio/holdings"
         portfolio_holdings_auction = "/portfolio/holdings/auctions"
-        portfolio_positions_convert = "/portfolio/positions"
+        portfolio_positions_convert = "/portfolio/positions"    # not working
 
         market_quote = "/quote"
         market_quote_ohlc = "/quote/ohlc"
@@ -100,7 +101,6 @@ class pykite:
         # Margin computation endpoints
         order_margins = "/margins/orders"
         order_margins_basket = "/margins/basket"
-        market_margins = "/margins/{segment}"
 
         # Historical data
         class interval:
@@ -108,7 +108,7 @@ class pykite:
 
         market_historical = "/instruments/historical/{instrument_token}/{interval}"
 
-    def __init__(self, userid, password, twofa, key_type="totp"):
+    def __init__(self, userid='', password='', twofa='', key_type="totp", enctoken=None):
         """
         Initialise a new pykite client instance.
 
@@ -116,36 +116,46 @@ class pykite:
         :param password: kite password
         :param twofa: Totp/PIN/TotpKey
         :param key_type: {'totp','pin','totpkey'}, default 'totp'
+
+        or
+
+        :param enctoken: you can directly pass enctoken from browser
+
         """
 
         self.session = requests.session()
         self._login_url = "https://kite.zerodha.com/api"
 
-        # login
-        data = {"user_id": userid, "password": password}
-        response = self.session.post(f"{self._login_url}/login", data=data)
-        if response.status_code != 200:
-            raise Exception(response.json())
+        if enctoken is None:
 
-        # verify twofa
-        if key_type == "totpkey":
-            twofa = pyotp.TOTP(twofa).now()
+            # login
+            data = {"user_id": userid, "password": password}
+            response = self.session.post(f"{self._login_url}/login", data=data)
+            if response.status_code != 200:
+                raise Exception(response.json())
 
-        data = {
-            "request_id": response.json()['data']['request_id'],
-            "twofa_value": twofa,
-            "user_id": response.json()['data']['user_id']
-        }
+            # verify twofa
+            if key_type == "totpkey":
+                twofa = pyotp.TOTP(twofa).now()
 
-        response = self.session.post(f"{self._login_url}/twofa", data=data)
+            data = {
+                "request_id": response.json()['data']['request_id'],
+                "twofa_value": twofa,
+                "user_id": response.json()['data']['user_id']
+            }
 
-        if response.status_code != 200:
-            raise Exception(response.json())
+            response = self.session.post(f"{self._login_url}/twofa", data=data)
 
-        self.enctoken = response.cookies.get('enctoken')
+            if response.status_code != 200:
+                raise Exception(response.json())
 
-        if self.enctoken is None:
-            raise Exception("Invalid detail. !!!")
+            self.enctoken = response.cookies.get('enctoken')
+
+            if self.enctoken is None:
+                raise Exception("Invalid detail. !!!")
+
+        else:
+            self.enctoken = enctoken
 
         self.root_url = "https://api.kite.trade"
         self.header = {"Authorization": f"enctoken {self.enctoken}"}
@@ -322,23 +332,23 @@ class pykite:
         response = self.session.get(f"{self.root_url}{self.urls.market_quote_ltp}", params={"i": ins}, headers=self.header).json()
         return response
 
-    # def order_margins(self, list_of_orders):
-    #     """
-    #     Calculate margins for requested order list considering the existing positions and open orders
-    #
-    #     - `params` is list of orders to retrive margins detail
-    #     """
-    #     response = self.session.post(f"{self.root_url}{self.urls.order_margins}", data=list_of_orders, headers=self.header)
-    #     return response
-    #
-    # def basket_order_margins(self, params, consider_positions=True, mode=None):
-    #     """
-    #     Calculate total margins required for basket of orders including margin benefits
-    #
-    #     - `params` is list of orders to fetch basket margin
-    #     - `consider_positions` is a boolean to consider users positions
-    #     - `mode` is margin response mode type. compact - Compact mode will only give the total margins
-    #     """
-    #     data = {'consider_positions': consider_positions, 'mode': mode}
-    #     response = self.session.post(f"{self.root_url}{self.urls.order_margins_basket}", data=data, params=params, headers=self.header)
-    #     return response
+    def order_margins(self, list_of_orders):
+        """
+        Calculate margins for requested order list considering the existing positions and open orders
+
+        - `params` is list of orders to retrive margins detail
+        """
+        response = self.session.post(f"{self.root_url}{self.urls.order_margins}", data=json.dumps(list_of_orders), headers=self.header)
+        return response
+
+    def basket_order_margins(self, list_of_orders, consider_positions=True, mode=None):
+        """
+        Calculate total margins required for basket of orders including margin benefits
+
+        - `params` is list of orders to fetch basket margin
+        - `consider_positions` is a boolean to consider users positions
+        - `mode` is margin response mode type. compact - Compact mode will only give the total margins
+        """
+        params = {'consider_positions': consider_positions, 'mode': mode}
+        response = self.session.post(f"{self.root_url}{self.urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.header)
+        return response

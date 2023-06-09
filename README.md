@@ -1,1 +1,1 @@
-# Zerodha-Rest-API Trade-Without-API-Cost
+# Zerodha-Python Trade-Without-API-Cost
