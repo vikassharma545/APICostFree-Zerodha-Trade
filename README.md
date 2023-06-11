@@ -151,23 +151,22 @@ print(kite.ltp(instrument_list))
 
 ```python
 # fetch all instruments
-instrument_all = kite.instruments()
+instrument_all = kite.instruments_data()
 print(instrument_all)
 
 # Fetch instrument for particular exchange
-instrument_nse = kite.instruments("NSE")
+instrument_nse = kite.instruments_data("NSE")
 print(instrument_nse)
 
-
 # fetch and download instrument file to disk
-instrument_nfo = kite.instruments("NFO", download=True, download_path="./instrument_nfo.csv")
+instrument_nfo = kite.instruments_data("NFO", download=True, download_path="./instrument_nfo.csv")
 print(instrument_nfo)
 ```
 
 ### Historical data
 
 ```python
-instrument_nse = kite.instruments("NSE")
+instrument_nse = kite.instruments_data("NSE")
 sbin_instrument_token = instrument_nse[instrument_nse['tradingsymbol']=="SBIN"]['instrument_token'].iloc[0]
 
 json_data = kite.historical_data(sbin_instrument_token, 
