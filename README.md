@@ -168,7 +168,7 @@ print(instrument_nfo)
 
 ```python
 instrument_nse = kite.instruments("NSE")
-sbin_instrument_token = instrument_nse[instrument_nse['tradingsymbol'] == "SBIN"]['instrument_token'].iloc[0]
+sbin_instrument_token = instrument_nse[instrument_nse['tradingsymbol']=="SBIN"]['instrument_token'].iloc[0]
 
 json_data = kite.historical_data(sbin_instrument_token, 
                                  from_date="2021-01-01 00:00:00", 
