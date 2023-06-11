@@ -4,6 +4,7 @@ import datetime
 import requests
 import pandas as pd
 
+
 class pykite:
     """
     The Pykite wrapper class.
@@ -85,11 +86,11 @@ class pykite:
         market_quote_ohlc = "/quote/ohlc"
         market_quote_ltp = "/quote/ltp"
 
-        # Margin computation endpoints
         order_margins = "/margins/orders"
         order_margins_basket = "/margins/basket"
 
-        # Historical data
+        instrument = "https://api.kite.trade/instruments"
+
         market_historical = "/instruments/historical/{instrument_token}/{interval}"
 
     def __init__(self, userid='', password='', twofa='', key_type="totp", enctoken=None):
@@ -107,14 +108,16 @@ class pykite:
 
         """
 
-        self.session = requests.session()
-        self._login_url = "https://kite.zerodha.com/api"
+        self.__session = requests.session()
+        self.__login_url = "https://kite.zerodha.com/api"
+        self.__root_url = "https://api.kite.trade"
+        self.__urls = self.__urls()
 
         if enctoken is None:
 
             # login
             data = {"user_id": userid, "password": password}
-            response = self.session.post(f"{self._login_url}/login", data=data)
+            response = self.__session.post(f"{self.__login_url}/login", data=data)
             if response.status_code != 200:
                 raise Exception(response.json())
 
@@ -128,7 +131,7 @@ class pykite:
                 "user_id": response.json()['data']['user_id']
             }
 
-            response = self.session.post(f"{self._login_url}/twofa", data=data)
+            response = self.__session.post(f"{self.__login_url}/twofa", data=data)
 
             if response.status_code != 200:
                 raise Exception(response.json())
@@ -141,15 +144,13 @@ class pykite:
         else:
             self.enctoken = enctoken
 
-        self.root_url = "https://api.kite.trade"
-        self.header = {"Authorization": f"enctoken {self.enctoken}"}
-        self.urls = self.__urls()
+        self.__header = {"Authorization": f"enctoken {self.enctoken}"}
 
     def profile(self):
         """
         Get user profile details.
         """
-        response = self.session.get(f"{self.root_url}{self.urls.user_profile}", headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.user_profile}", headers=self.__header).json()
         return response
 
     def margins(self, segment=None):
@@ -159,9 +160,9 @@ class pykite:
         """
 
         if segment:
-            response = self.session.get(f"{self.root_url}{self.urls.user_margins_segment.format(segment=segment)}", headers=self.header).json()
+            response = self.__session.get(f"{self.__root_url}{self.__urls.user_margins_segment.format(segment=segment)}", headers=self.__header).json()
         else:
-            response = self.session.get(f"{self.root_url}{self.urls.user_margins}", headers=self.header).json()
+            response = self.__session.get(f"{self.__root_url}{self.__urls.user_margins}", headers=self.__header).json()
         return response
 
     # orderbook and tradebook
@@ -169,42 +170,42 @@ class pykite:
         """
         Get list of orders.
         """
-        response = self.session.get(f"{self.root_url}{self.urls.orders}", headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.orders}", headers=self.__header).json()
         return response
 
     def trades(self):
         """
         Retrieve the list of trades executed (all or ones under a particular order).
         """
-        response = self.session.get(f"{self.root_url}{self.urls.trades}", headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.trades}", headers=self.__header).json()
         return response
 
     def positions(self):
         """
         Retrieve the list of positions.
         """
-        response = self.session.get(f"{self.root_url}{self.urls.portfolio_positions}", headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.portfolio_positions}", headers=self.__header).json()
         return response
 
     def holdings(self):
         """
         Retrieve the list of equity holdings.
         """
-        response = self.session.get(f"{self.root_url}{self.urls.portfolio_holdings}", headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.portfolio_holdings}", headers=self.__header).json()
         return response
 
     def order_history(self, order_id):
         """
         Get history of individual order.
         """
-        response = self.session.get(f"{self.root_url}{self.urls.order_info.format(order_id=order_id)}", headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.order_info.format(order_id=order_id)}", headers=self.__header).json()
         return response
 
     def order_trades(self, order_id):
         """
         Retrieve the list of trades executed for a particular order.
         """
-        response = self.session.get(f"{self.root_url}{self.urls.order_trades.format(order_id=order_id)}", headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.order_trades.format(order_id=order_id)}", headers=self.__header).json()
         return response
 
     def place_order(self,
@@ -234,7 +235,7 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        response = self.session.post(f"{self.root_url}{self.urls.order_place.format(variety = variety)}", data=params, headers=self.header).json()
+        response = self.__session.post(f"{self.__root_url}{self.__urls.order_place.format(variety = variety)}", data=params, headers=self.__header).json()
         return response['message']
 
     def modify_order(self,
@@ -257,7 +258,7 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        response = self.session.put(f"{self.root_url}{self.urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.header).json()
+        response = self.__session.put(f"{self.__root_url}{self.__urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.__header).json()
         return response['message']
 
     def cancel_order(self, variety, order_id, parent_order_id=None):
@@ -265,7 +266,7 @@ class pykite:
         Cancel an order.
         """
         params = {"parent_order_id": parent_order_id}
-        response = self.session.delete(f"{self.root_url}{self.urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.header).json()
+        response = self.__session.delete(f"{self.__root_url}{self.__urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.__header).json()
         return response['message']
 
     def convert_position(self,
@@ -283,23 +284,8 @@ class pykite:
         del (params["self"])
 
         """Modify an open position's product type."""
-        response = self.session.put(f"{self.root_url}{self.urls.portfolio_positions_convert}", params=params, headers=self.header).json()
+        response = self.__session.put(f"{self.__root_url}{self.__urls.portfolio_positions_convert}", params=params, headers=self.__header).json()
         return response['message']
-
-    def instruments(self, exchange=None, download=False, download_path=""):
-        """
-        Fetch Instruments data
-            - `exchange` is the trading exchange (eg: 'BCD', 'BFO', 'BSE', 'CDS', 'MCX', 'NSE', 'NFO')
-        """
-        instruments = pd.read_csv("https://api.kite.trade/instruments")
-
-        if download:
-            instruments.to_csv(download_path, index=False)
-
-        if exchange:
-            instruments = instruments[instruments['exchange'] == exchange].reset_index(drop=True)
-
-        return instruments
 
     def quotes(self, instruments):
         """
@@ -313,33 +299,33 @@ class pykite:
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
-        response = self.session.get(f"{self.root_url}{self.urls.market_quote}", params={"i": ins}, headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote}", params={"i": ins}, headers=self.__header).json()
         return response['data']
 
     def ohlc(self, instruments):
-        '''
+        """
         Retrieve OHLC and market depth for list of instruments.
-        '''
+        """
 
         ins = list(instruments)
 
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
-        response = self.session.get(f"{self.root_url}{self.urls.market_quote_ohlc}", params={"i": ins}, headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote_ohlc}", params={"i": ins}, headers=self.__header).json()
         return response['data']
 
     def ltp(self, instruments):
-        '''
+        """
         Retrieve last price for list of instruments.
-        '''
+        """
 
         ins = list(instruments)
 
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
-        response = self.session.get(f"{self.root_url}{self.urls.market_quote_ltp}", params={"i": ins}, headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote_ltp}", params={"i": ins}, headers=self.__header).json()
         return response['data']
 
     def order_margins(self, list_of_orders):
@@ -348,7 +334,7 @@ class pykite:
 
         - `params` is list of orders to retrive margins detail
         """
-        response = self.session.post(f"{self.root_url}{self.urls.order_margins}", data=json.dumps(list_of_orders), headers=self.header)
+        response = self.__session.post(f"{self.__root_url}{self.__urls.order_margins}", data=json.dumps(list_of_orders), headers=self.__header)
         return response
 
     def basket_order_margins(self, list_of_orders, consider_positions=True, mode=None):
@@ -360,8 +346,23 @@ class pykite:
         - `mode` is margin response mode type. compact - Compact mode will only give the total margins
         """
         params = {'consider_positions': consider_positions, 'mode': mode}
-        response = self.session.post(f"{self.root_url}{self.urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.header).json()
+        response = self.__session.post(f"{self.__root_url}{self.__urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.__header)
         return response
+
+    def instruments_data(self, exchange=None, download=False, download_path=""):
+        """
+        Fetch Instruments data
+            - `exchange` is the trading exchange (eg: 'BCD', 'BFO', 'BSE', 'CDS', 'MCX', 'NSE', 'NFO')
+        """
+        instruments_df = pd.read_csv(self.__urls.instrument)
+
+        if download:
+            instruments_df.to_csv(download_path, index=False)
+
+        if exchange:
+            instruments_df = instruments_df[instruments_df['exchange'] == exchange].reset_index(drop=True)
+
+        return instruments_df
 
     def historical_data(self, instrument_token, from_date, to_date, interval, continuous=False, oi=False):
         """
@@ -370,7 +371,7 @@ class pykite:
         names such has 'open', 'high' etc., this function call structures
         the data into an array of objects with field names. For example:
         - `instrument_token` is the instrument identifier (retrieved from the instruments()) call.
-        - `from_date` is the From date (datetime object or string in format of yyyy-mm-dd HH:MM:SS.
+        - `from_date` is the From date (datetime object or string in format of yyyy-mm-dd HH:MM:SS).
         - `to_date` is the To date (datetime object or string in format of yyyy-mm-dd HH:MM:SS).
         - `interval` is the candle interval (minute, day, 5 minute etc.).
         - `continuous` is a boolean flag to get continuous data for futures and options instruments.
@@ -388,5 +389,5 @@ class pykite:
              "oi": 1 if oi else 0
          }
 
-        response = self.session.get(f"{self.root_url}{self.urls.market_historical.format(instrument_token=instrument_token, interval=interval)}", params=params, headers=self.header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_historical.format(instrument_token=instrument_token, interval=interval)}", params=params, headers=self.__header).json()
         return response
