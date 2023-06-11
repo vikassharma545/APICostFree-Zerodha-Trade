@@ -1,20 +1,7 @@
-import os
 import json
-
-try:
-    import requests
-except:
-    os.system("pip install requests")
-
-try:
-    import pyotp
-except:
-    os.system("pip install pyotp")
-
-try:
-    import pandas as pd
-except:
-    os.system("pip install pandas")
+import pyotp
+import requests
+import pandas as pd
 
 class pykite:
     """
@@ -91,7 +78,6 @@ class pykite:
 
         portfolio_positions = "/portfolio/positions"
         portfolio_holdings = "/portfolio/holdings"
-        portfolio_holdings_auction = "/portfolio/holdings/auctions"
         portfolio_positions_convert = "/portfolio/positions"    # not working
 
         market_quote = "/quote"
@@ -160,11 +146,19 @@ class pykite:
         self.root_url = "https://api.kite.trade"
         self.header = {"Authorization": f"enctoken {self.enctoken}"}
         self.urls = self.__urls()
+
     def profile(self):
+        """
+        Get user profile details.
+        """
         response = self.session.get(f"{self.root_url}{self.urls.user_profile}", headers=self.header).json()
         return response
 
-    def margin(self, segment=None):
+    def margins(self, segment=None):
+        """
+        Get account balance and cash margin details for a particular segment.
+            - `segment` is the trading segment (eg: equity or commodity)
+        """
 
         if segment:
             response = self.session.get(f"{self.root_url}{self.urls.user_margins_segment.format(segment=segment)}", headers=self.header).json()
@@ -174,18 +168,31 @@ class pykite:
 
     # orderbook and tradebook
     def orders(self):
-        """Get list of orders."""
+        """
+        Get list of orders.
+        """
         response = self.session.get(f"{self.root_url}{self.urls.orders}", headers=self.header).json()
         return response
 
     def trades(self):
         """
         Retrieve the list of trades executed (all or ones under a particular order).
-
-        An order can be executed in tranches based on market conditions.
-        These trades are individually recorded under an order.
         """
         response = self.session.get(f"{self.root_url}{self.urls.trades}", headers=self.header).json()
+        return response
+
+    def positions(self):
+        """
+        Retrieve the list of positions.
+        """
+        response = self.session.get(f"{self.root_url}{self.urls.portfolio_positions}", headers=self.header).json()
+        return response
+
+    def holdings(self):
+        """
+        Retrieve the list of equity holdings.
+        """
+        response = self.session.get(f"{self.root_url}{self.urls.portfolio_holdings}", headers=self.header).json()
         return response
 
     def order_history(self, order_id):
@@ -219,7 +226,9 @@ class pykite:
                     iceberg_quantity=None,
                     auction_number=None,
                     tag=None):
-        """Place an order."""
+        """
+        Place an order.
+        """
         params = locals()
         del (params["self"])
 
@@ -227,7 +236,8 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        return self.session.post(f"{self.root_url}{self.urls.order_place.format(variety = variety)}", data=params, headers=self.header)
+        response = self.session.post(f"{self.root_url}{self.urls.order_place.format(variety = variety)}", data=params, headers=self.header).json()
+        return response['message']
 
     def modify_order(self,
                      variety,
@@ -239,8 +249,9 @@ class pykite:
                      trigger_price=None,
                      validity=None,
                      disclosed_quantity=None):
-
-        """Modify an open order."""
+        """
+        Modify an open order.
+        """
         params = locals()
         del (params["self"])
 
@@ -248,25 +259,16 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        return self.session.put(f"{self.root_url}{self.urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
+        response = self.session.put(f"{self.root_url}{self.urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.header).json()
+        return response['message']
 
     def cancel_order(self, variety, order_id, parent_order_id=None):
-        """Cancel an order."""
+        """
+        Cancel an order.
+        """
         params = {"parent_order_id": parent_order_id}
-        return self.session.delete(f"{self.root_url}{self.urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.header)
-
-    def positions(self):
-        """Retrieve the list of positions."""
-        response = self.session.get(f"{self.root_url}{self.urls.portfolio_positions}", headers=self.header).json()
-        return response
-    def holdings(self):
-        """Retrieve the list of equity holdings."""
-        response = self.session.get(f"{self.root_url}{self.urls.portfolio_holdings}", headers=self.header).json()
-        return response
-
-    def get_auction_instruments(self):
-        response = self.session.get(f"{self.root_url}{self.urls.portfolio_holdings_auction}", headers=self.header).json()
-        return response
+        response = self.session.delete(f"{self.root_url}{self.urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.header).json()
+        return response['message']
 
     def convert_position(self,
                          exchange,
@@ -276,19 +278,25 @@ class pykite:
                          quantity,
                          old_product,
                          new_product):
-
+        """
+        Modify an open position's product type.
+        """
         params = locals()
         del (params["self"])
 
         """Modify an open position's product type."""
-        response = self.session.put(f"{self.root_url}{self.urls.portfolio_positions_convert}", params=params, headers=self.header)
-        return response
+        response = self.session.put(f"{self.root_url}{self.urls.portfolio_positions_convert}", params=params, headers=self.header).json()
+        return response['message']
 
     def instruments(self, exchange=None, download=False, download_path=""):
+        """
+        Fetch Instruments data
+            - `exchange` is the trading exchange (eg: 'BCD', 'BFO', 'BSE', 'CDS', 'MCX', 'NSE', 'NFO')
+        """
         instruments = pd.read_csv("https://api.kite.trade/instruments")
 
         if download:
-            instruments.to_csv(download_path)
+            instruments.to_csv(download_path, index=False)
 
         if exchange:
             instruments = instruments[instruments['exchange'] == exchange].reset_index(drop=True)
@@ -308,29 +316,33 @@ class pykite:
             ins = instruments[0]
 
         response = self.session.get(f"{self.root_url}{self.urls.market_quote}", params={"i": ins}, headers=self.header).json()
-        return response
+        return response['data']
 
     def ohlc(self, instruments):
+        '''
+        Retrieve OHLC and market depth for list of instruments.
+        '''
 
         ins = list(instruments)
 
-        # If first element is a list then accept it as instruments list for legacy reason
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
         response = self.session.get(f"{self.root_url}{self.urls.market_quote_ohlc}", params={"i": ins}, headers=self.header).json()
-        return response
+        return response['data']
 
     def ltp(self, instruments):
+        '''
+        Retrieve last price for list of instruments.
+        '''
 
         ins = list(instruments)
 
-        # If first element is a list then accept it as instruments list for legacy reason
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
         response = self.session.get(f"{self.root_url}{self.urls.market_quote_ltp}", params={"i": ins}, headers=self.header).json()
-        return response
+        return response['data']
 
     def order_margins(self, list_of_orders):
         """
