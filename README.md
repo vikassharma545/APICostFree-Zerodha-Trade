@@ -100,39 +100,72 @@ print(kite.convert_position(exchange=kite.EXCHANGE_NSE,
 
 ```
 
-### Market data Fetch
+### Calculate margin required of orders
 
 ```python
-# fetch all instruments
-instrument_all = kite.instruments()
-print(instrument_all)
+list_of_order = [{'exchange': 'NFO',
+                  'tradingsymbol': 'BANKNIFTY2361544000CE',
+                  'transaction_type': 'SELL',
+                  'variety': 'regular',
+                  'product': 'MIS',
+                  'order_type': 'MARKET',
+                  'quantity': 25,
+                  'price': 0,
+                  'trigger_price': 0,
+                  'squareoff': 0,
+                  'stoploss': 0},
+                 {'exchange': 'NFO',
+                  'tradingsymbol': 'BANKNIFTY2361544000PE',
+                  'transaction_type': 'SELL',
+                  'variety': 'regular',
+                  'product': 'MIS',
+                  'order_type': 'MARKET',
+                  'quantity': 25,
+                  'price': 0,
+                  'trigger_price': 0,
+                  'squareoff': 0,
+                  'stoploss': 0}]
 
-# # Fetch instrument for particular exchange
-instrument_nse = kite.instruments("NSE")
-print(instrument_nse)
+# Calculate margins considering the existing positions and open orders
+print(kite.order_margins(list_of_order).json()['data'])
 
+# Calculate total margins required including margin benefits
+print(kite.basket_order_margins(list_of_order).json()['data'])
+```
+### Market Quotes
 
-# # fetch and download instrument file to disk
-instrument_nfo = kite.instruments("NFO", download=True, download_path="./instrument_nfo.csv")
-print(instrument_nfo)
-
+```python
 instrument_list = ["NSE:SBIN", "NSE:HDFC", "NSE:RELIANCE"]
 
 # Retrieve quote for list of instruments.
 print(kite.quotes(instrument_list))
 
 # Retrieve OHLC for list of instruments for current day.
-print(kite.ltp(instrument_list))
+print(kite.ohlc(instrument_list))
 
 # Retrieve Last trade price for list of instruments.
 print(kite.ltp(instrument_list))
 ```
 
-### Margin detail
+### Instruments data
+
+```python
+# fetch all instruments
+instrument_all = kite.instruments()
+print(instrument_all)
+
+# Fetch instrument for particular exchange
+instrument_nse = kite.instruments("NSE")
+print(instrument_nse)
+
+
+# fetch and download instrument file to disk
+instrument_nfo = kite.instruments("NFO", download=True, download_path="./instrument_nfo.csv")
+print(instrument_nfo)
+```
+
+### Historical data
 
 ```python
 
 ```
-
-
-

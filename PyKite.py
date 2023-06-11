@@ -362,5 +362,5 @@ class pykite:
         - `mode` is margin response mode type. compact - Compact mode will only give the total margins
         """
         params = {'consider_positions': consider_positions, 'mode': mode}
-        response = self.session.post(f"{self.root_url}{self.urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.header)
+        response = self.session.post(f"{self.root_url}{self.urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.header).json()
         return response
