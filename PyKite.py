@@ -1,5 +1,6 @@
 import json
 import pyotp
+import datetime
 import requests
 import pandas as pd
 
@@ -89,9 +90,6 @@ class pykite:
         order_margins_basket = "/margins/basket"
 
         # Historical data
-        class interval:
-            pass
-
         market_historical = "/instruments/historical/{instrument_token}/{interval}"
 
     def __init__(self, userid='', password='', twofa='', key_type="totp", enctoken=None):
@@ -363,4 +361,32 @@ class pykite:
         """
         params = {'consider_positions': consider_positions, 'mode': mode}
         response = self.session.post(f"{self.root_url}{self.urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.header).json()
+        return response
+
+    def historical_data(self, instrument_token, from_date, to_date, interval, continuous=False, oi=False):
+        """
+        Retrieve historical data (candles) for an instrument.
+        Although the actual response JSON from the API does not have field
+        names such has 'open', 'high' etc., this function call structures
+        the data into an array of objects with field names. For example:
+        - `instrument_token` is the instrument identifier (retrieved from the instruments()) call.
+        - `from_date` is the From date (datetime object or string in format of yyyy-mm-dd HH:MM:SS.
+        - `to_date` is the To date (datetime object or string in format of yyyy-mm-dd HH:MM:SS).
+        - `interval` is the candle interval (minute, day, 5 minute etc.).
+        - `continuous` is a boolean flag to get continuous data for futures and options instruments.
+        - `oi` is a boolean flag to get open interest.
+        """
+        date_string_format = "%Y-%m-%d %H:%M:%S"
+        from_date_string = from_date.strftime(date_string_format) if type(from_date) == datetime.datetime else from_date
+        to_date_string = to_date.strftime(date_string_format) if type(to_date) == datetime.datetime else to_date
+
+        params = {
+             "from": from_date_string,
+             "to": to_date_string,
+             "interval": interval,
+             "continuous": 1 if continuous else 0,
+             "oi": 1 if oi else 0
+         }
+
+        response = self.session.get(f"{self.root_url}{self.urls.market_historical.format(instrument_token=instrument_token, interval=interval)}", params=params, headers=self.header).json()
         return response
