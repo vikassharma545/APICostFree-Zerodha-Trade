@@ -391,3 +391,25 @@ class pykite:
 
         response = self.__session.get(f"{self.__root_url}{self.__urls.market_historical.format(instrument_token=instrument_token, interval=interval)}", params=params, headers=self.__header).json()
         return response
+
+    def mtm(self):
+        res = self.positions()
+
+        net_mtm = sum([m['m2m'] for m in res['data']['net']])
+        day_mtm = sum([m['m2m'] for m in res['data']['day']])
+
+        return {"net": net_mtm, "day": day_mtm }
+
+    def pnl(self):
+        res = self.positions()
+
+        net_realised = round(sum([m['realised'] for m in res['data']['net']]), 2)
+        net_unrealised = round(sum([m['unrealised'] for m in res['data']['net']]), 2)
+        net_total = round(net_realised + net_unrealised, 2)
+
+        day_realised = round(sum([m['realised'] for m in res['data']['day']]), 2)
+        day_unrealised = round(sum([m['unrealised'] for m in res['data']['day']]), 2)
+        day_total = round(day_realised + day_unrealised, 2)
+
+        return {"net": {'realised': net_realised, 'unrealised': net_unrealised, 'total': net_total},
+                "day": {'realised': day_realised, 'unrealised': day_unrealised, 'total': day_total}}
