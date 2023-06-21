@@ -395,8 +395,8 @@ class pykite:
     def mtm(self):
         res = self.positions()
 
-        net_mtm = sum([m['m2m'] for m in res['data']['net']])
-        day_mtm = sum([m['m2m'] for m in res['data']['day']])
+        net_mtm = round(sum([m['m2m'] for m in res['data']['net']]), 2)
+        day_mtm = round(sum([m['m2m'] for m in res['data']['day']]), 2)
 
         return {"net": net_mtm, "day": day_mtm }
 
