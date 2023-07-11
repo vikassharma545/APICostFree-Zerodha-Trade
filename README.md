@@ -32,9 +32,12 @@ kite = pykite()
 ```
 
 ### Notes - You can use zerodha on kite App Mobile and algo in Browser using BrowserView.py
+#### Requirement for BrowserView.py
+* selenium >= 4.10.0 ```pip install selenium```
+* wedriver_manager >= 3.8.6 ```pip install webdriver_manager```
+
 
 ## Usages
-
 
 ### Accounts and trades details
 ```python
