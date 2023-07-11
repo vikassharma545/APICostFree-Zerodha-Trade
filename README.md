@@ -8,33 +8,30 @@
 * requests >= 2.28.1  ``` pip install requests```
 * pyotp >= 2.8.0      ```pip install pyotp```
 * pandas >= 1.5.0     ```pip install pandas```
+* [Set TOTP login in Kite](https://support.zerodha.com/category/your-zerodha-account/login-credentials/login-credentials-of-trading-platforms/articles/time-based-otp-setup) (Remember to copy totpkey from  link below the QR code)
+![img.png](img.png)
+
+###### Update Config.ini USERINFO
+
+```editorconfig
+
+[USERINFO]
+userid = VIKAS
+password = Vikas@123
+totpkey = ABCDRFGHIJKLMNOPQRSTUVWXYZ
+
+[ENCTOKEN]
+enctoken = qASlwVCUrOefHZ2LrxjVqtH1tkndKl8TvlFs2NyFuiVXctGlFpmRn4ec2feh48lZRcNMjeBfvlb1TvUcMDfyKjhE6ar+qhHe3xm3zEk7TEvDWAv4Wy6Feg==
+```
 
 How to use
+
 ```python
 from PyKite import pykite
+kite = pykite()
 ```
 
-Login Method - 1
-```python
-
-# using Userid password and totp/pin/totpkey
-# condition not use zerodha on browser
-
-kite = pykite(userid="userid", password="password", twofa="twofa", key_type="totp")
-```
-
-Login Method - 2
-```python
-# login directly using entoken copy from browser after login zerodha 
-# condition not use zerodha web on different pc
-# after login don't logout from current session
-
-enctoken = "E0zW+0684kAxZJPbSSIRv1lKIIqM8Iyw2tQ5WVxwg/oDbmclZrakC/poFPpg=="
-
-kite = pykite(enctoken=enctoken)
-```
-
-### Notes - You can use zerodha on kite App Mobile 
+### Notes - You can use zerodha on kite App Mobile and algo in Browser using BrowserView.py
 
 ## Usages
 
