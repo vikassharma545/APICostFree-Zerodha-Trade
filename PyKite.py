@@ -3,7 +3,7 @@ import pyotp
 import datetime
 import requests
 import pandas as pd
-
+from configparser import ConfigParser
 
 class pykite:
     """
@@ -93,18 +93,9 @@ class pykite:
 
         market_historical = "/instruments/historical/{instrument_token}/{interval}"
 
-    def __init__(self, userid='', password='', twofa='', key_type="totp", enctoken=None):
+    def __init__(self):
         """
         Initialise a new pykite client instance.
-
-        :param userid: Kite userId
-        :param password: kite password
-        :param twofa: Totp/PIN/TotpKey
-        :param key_type: {'totp','pin','totpkey'}, default 'totp'
-
-        or
-
-        :param enctoken: you can directly pass enctoken from browser
 
         """
 
@@ -112,45 +103,56 @@ class pykite:
         self.__login_url = "https://kite.zerodha.com/api"
         self.__root_url = "https://api.kite.trade"
         self.__urls = self.__urls()
+        
+        #Read config.ini file
+        config_object = ConfigParser()
+        config_object.read("config.ini")
+        userinfo = config_object["USERINFO"]
 
-        if enctoken is None:
+        # login
+        data = {"user_id": userinfo.get("userid"), "password": userinfo.get("password")}
+        response = self.__session.post(f"{self.__login_url}/login", data=data)
+        if response.status_code != 200:
+            raise Exception(response.json())
 
-            # login
-            data = {"user_id": userid, "password": password}
-            response = self.__session.post(f"{self.__login_url}/login", data=data)
-            if response.status_code != 200:
-                raise Exception(response.json())
+        # verify twofa
+        twofa = pyotp.TOTP(userinfo.get("totpkey")).now()
 
-            # verify twofa
-            if key_type == "totpkey":
-                twofa = pyotp.TOTP(twofa).now()
+        data = {
+            "request_id": response.json()['data']['request_id'],
+            "twofa_value": twofa,
+            "user_id": response.json()['data']['user_id']
+        }
 
-            data = {
-                "request_id": response.json()['data']['request_id'],
-                "twofa_value": twofa,
-                "user_id": response.json()['data']['user_id']
-            }
+        response = self.__session.post(f"{self.__login_url}/twofa", data=data)
 
-            response = self.__session.post(f"{self.__login_url}/twofa", data=data)
+        if response.status_code != 200:
+            raise Exception(response.json())
 
-            if response.status_code != 200:
-                raise Exception(response.json())
+        self.__enctoken = response.cookies.get('enctoken')
 
-            self.enctoken = response.cookies.get('enctoken')
-
-            if self.enctoken is None:
-                raise Exception("Invalid detail. !!!")
-
+        if self.__enctoken is None:
+            raise Exception("Invalid detail. !!!")
         else:
-            self.enctoken = enctoken
+            tokeninfo = config_object["ENCTOKEN"]
+            tokeninfo["enctoken"] = self.__enctoken
 
-        self.__header = {"Authorization": f"enctoken {self.enctoken}"}
+            #Write changes back to file
+            with open('config.ini', 'w') as conf:
+                config_object.write(conf)
+        
+    def get_header(self):
+        config_object = ConfigParser()
+        config_object.read("config.ini")
+        tokeninfo = config_object["ENCTOKEN"]
+        enctoken = tokeninfo.get("enctoken")
+        return {"Authorization": f"enctoken {enctoken}"}
 
     def profile(self):
         """
         Get user profile details.
         """
-        response = self.__session.get(f"{self.__root_url}{self.__urls.user_profile}", headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.user_profile}", headers=self.get_header()).json()
         return response
 
     def margins(self, segment=None):
@@ -160,9 +162,9 @@ class pykite:
         """
 
         if segment:
-            response = self.__session.get(f"{self.__root_url}{self.__urls.user_margins_segment.format(segment=segment)}", headers=self.__header).json()
+            response = self.__session.get(f"{self.__root_url}{self.__urls.user_margins_segment.format(segment=segment)}", headers=self.get_header()).json()
         else:
-            response = self.__session.get(f"{self.__root_url}{self.__urls.user_margins}", headers=self.__header).json()
+            response = self.__session.get(f"{self.__root_url}{self.__urls.user_margins}", headers=self.get_header()).json()
         return response
 
     # orderbook and tradebook
@@ -170,42 +172,42 @@ class pykite:
         """
         Get list of orders.
         """
-        response = self.__session.get(f"{self.__root_url}{self.__urls.orders}", headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.orders}", headers=self.get_header()).json()
         return response
 
     def trades(self):
         """
         Retrieve the list of trades executed (all or ones under a particular order).
         """
-        response = self.__session.get(f"{self.__root_url}{self.__urls.trades}", headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.trades}", headers=self.get_header()).json()
         return response
 
     def positions(self):
         """
         Retrieve the list of positions.
         """
-        response = self.__session.get(f"{self.__root_url}{self.__urls.portfolio_positions}", headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.portfolio_positions}", headers=self.get_header()).json()
         return response
 
     def holdings(self):
         """
         Retrieve the list of equity holdings.
         """
-        response = self.__session.get(f"{self.__root_url}{self.__urls.portfolio_holdings}", headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.portfolio_holdings}", headers=self.get_header()).json()
         return response
 
     def order_history(self, order_id):
         """
         Get history of individual order.
         """
-        response = self.__session.get(f"{self.__root_url}{self.__urls.order_info.format(order_id=order_id)}", headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.order_info.format(order_id=order_id)}", headers=self.get_header()).json()
         return response
 
     def order_trades(self, order_id):
         """
         Retrieve the list of trades executed for a particular order.
         """
-        response = self.__session.get(f"{self.__root_url}{self.__urls.order_trades.format(order_id=order_id)}", headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.order_trades.format(order_id=order_id)}", headers=self.get_header()).json()
         return response
 
     def place_order(self,
@@ -235,7 +237,7 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        response = self.__session.post(f"{self.__root_url}{self.__urls.order_place.format(variety = variety)}", data=params, headers=self.__header).json()
+        response = self.__session.post(f"{self.__root_url}{self.__urls.order_place.format(variety = variety)}", data=params, headers=self.get_header()).json()
         return response['message']
 
     def modify_order(self,
@@ -258,7 +260,7 @@ class pykite:
             if params[k] is None:
                 del (params[k])
 
-        response = self.__session.put(f"{self.__root_url}{self.__urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.__header).json()
+        response = self.__session.put(f"{self.__root_url}{self.__urls.order_modify.format(variety = variety, order_id=order_id)}", data=params, headers=self.get_header()).json()
         return response['message']
 
     def cancel_order(self, variety, order_id, parent_order_id=None):
@@ -266,7 +268,7 @@ class pykite:
         Cancel an order.
         """
         params = {"parent_order_id": parent_order_id}
-        response = self.__session.delete(f"{self.__root_url}{self.__urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.__header).json()
+        response = self.__session.delete(f"{self.__root_url}{self.__urls.order_cancel.format(variety = variety, order_id=order_id)}", data=params, headers=self.get_header()).json()
         return response['message']
 
     def convert_position(self,
@@ -284,7 +286,7 @@ class pykite:
         del (params["self"])
 
         """Modify an open position's product type."""
-        response = self.__session.put(f"{self.__root_url}{self.__urls.portfolio_positions_convert}", params=params, headers=self.__header).json()
+        response = self.__session.put(f"{self.__root_url}{self.__urls.portfolio_positions_convert}", params=params, headers=self.get_header()).json()
         return response['message']
 
     def quotes(self, instruments):
@@ -299,7 +301,7 @@ class pykite:
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
-        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote}", params={"i": ins}, headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote}", params={"i": ins}, headers=self.get_header()).json()
         return response['data']
 
     def ohlc(self, instruments):
@@ -312,7 +314,7 @@ class pykite:
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
-        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote_ohlc}", params={"i": ins}, headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote_ohlc}", params={"i": ins}, headers=self.get_header()).json()
         return response['data']
 
     def ltp(self, instruments):
@@ -325,7 +327,7 @@ class pykite:
         if len(instruments) > 0 and type(instruments[0]) == list:
             ins = instruments[0]
 
-        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote_ltp}", params={"i": ins}, headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_quote_ltp}", params={"i": ins}, headers=self.get_header()).json()
         return response['data']
 
     def order_margins(self, list_of_orders):
@@ -334,7 +336,7 @@ class pykite:
 
         - `params` is list of orders to retrive margins detail
         """
-        response = self.__session.post(f"{self.__root_url}{self.__urls.order_margins}", data=json.dumps(list_of_orders), headers=self.__header)
+        response = self.__session.post(f"{self.__root_url}{self.__urls.order_margins}", data=json.dumps(list_of_orders), headers=self.get_header())
         return response
 
     def basket_order_margins(self, list_of_orders, consider_positions=True, mode=None):
@@ -346,7 +348,7 @@ class pykite:
         - `mode` is margin response mode type. compact - Compact mode will only give the total margins
         """
         params = {'consider_positions': consider_positions, 'mode': mode}
-        response = self.__session.post(f"{self.__root_url}{self.__urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.__header)
+        response = self.__session.post(f"{self.__root_url}{self.__urls.order_margins_basket}", data=json.dumps(list_of_orders), params=params, headers=self.get_header())
         return response
 
     def instruments_data(self, exchange=None, download=False, download_path=""):
@@ -389,7 +391,7 @@ class pykite:
              "oi": 1 if oi else 0
          }
 
-        response = self.__session.get(f"{self.__root_url}{self.__urls.market_historical.format(instrument_token=instrument_token, interval=interval)}", params=params, headers=self.__header).json()
+        response = self.__session.get(f"{self.__root_url}{self.__urls.market_historical.format(instrument_token=instrument_token, interval=interval)}", params=params, headers=self.get_header()).json()
         return response
 
     def mtm(self):
