@@ -17,7 +17,7 @@ driver.find_element(By.XPATH, "//input[@id='userid']").send_keys(userinfo.get("u
 driver.find_element(By.XPATH, "//input[@id='password']").send_keys(userinfo.get("password"))
 driver.find_element(By.XPATH, "//button[normalize-space()='Login']").click()
 sleep(3)
-driver.find_element(By.XPATH, "//input[@type='text']").send_keys(pyotp.TOTP(userinfo.get("totpkey")).now())
+driver.find_element(By.XPATH, "//input[@type='number']").send_keys(pyotp.TOTP(userinfo.get("totpkey")).now())
 sleep(2)
 
 enctoken = driver.get_cookie("enctoken")['value']
