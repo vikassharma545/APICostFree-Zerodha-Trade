@@ -1,15 +1,24 @@
 # APICostFree Zerodha Trade
-### _An unofficial python library for zerodha trade_
+### _An unofficial python library for zerodha trade !!!_
 
-## Prerequisites
+## Python supported
 * Python >= 3.7
 
+## Dependencies
+* requests >= 2.28.1 ``` pip install requests```
+* pyotp >= 2.8.0 ```pip install pyotp```
+* pandas >= 1.5.0 ```pip install pandas```
+* selenium >= 4.10.0 ```pip install selenium```
+* webdriver_manager >= 4.10.0 ```pip install selenium```
+
 ## Requirments
-* requests >= 2.28.1  ``` pip install requests```
-* pyotp >= 2.8.0      ```pip install pyotp```
-* pandas >= 1.5.0     ```pip install pandas```
-* [Set TOTP login in Kite](https://support.zerodha.com/category/your-zerodha-account/login-credentials/login-credentials-of-trading-platforms/articles/time-based-otp-setup) (Remember to copy totpkey from  link below the QR code)
+* [Enable External 2FA TOTP login in Kite](https://support.zerodha.com/category/your-zerodha-account/login-credentials/login-credentials-of-trading-platforms/articles/time-based-otp-setup)
+* Re-enable TOTP if already enabled (Remember to copy totpkey from link below the QR code)
 ![img.png](img.png)
+
+* Chrome Browser for View trade on Kite Web Using [BrowserView.py](BrowserView.py)
+
+# How to use
 
 ###### Update Config.ini USERINFO
 
@@ -21,24 +30,17 @@ password = Vikas@123
 totpkey = ABCDRFGHIJKLMNOPQRSTUVWXYZ
 
 [ENCTOKEN]
-enctoken = qASlwVCUrOefHZ2LrxjVqtH1tkndKl8TvlFs2NyFuiVXctGlFpmRn4ec2feh48lZRcNMjeBfvlb1TvUcMDfyKjhE6ar+qhHe3xm3zEk7TEvDWAv4Wy6Feg==
+enctoken = abcdefghijklmnopqrstuvwxyz==
 ```
 
-How to use
+#### Notes - While Using `Pykite` You can `only` use Zerodha kite App on Mobile and [BrowserView.py](BrowserView.py)
+## Usages
 
+### Creating an instance
 ```python
 from PyKite import pykite
 kite = pykite()
 ```
-
-### Notes - You can use zerodha on kite App Mobile and algo in Browser using BrowserView.py
-#### Requirement for BrowserView.py
-* Chrome Browser
-* selenium >= 4.10.0 ```pip install selenium```
-* wedriver_manager >= 3.8.6 ```pip install webdriver_manager```
-
-
-## Usages
 
 ### Accounts and trades details
 ```python
