@@ -101,7 +101,7 @@ class pykite:
 
         self.__session = requests.session()
         self.__login_url = "https://kite.zerodha.com/api"
-        self.__root_url = "https://api.kite.trade"
+        self.__root_url = "https://kite.zerodha.com/oms"
         self.__urls = self.__urls()
         
         #Read config.ini file
