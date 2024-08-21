@@ -20,7 +20,7 @@
 
 # How to use
 
-###### Update Config.ini USERINFO
+###### Update Config.ini USERINFO Only, Leave Enctoken filed
 
 ```editorconfig
 
