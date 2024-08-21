@@ -3,14 +3,12 @@ from time import sleep
 from selenium import webdriver
 from configparser import ConfigParser
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
 
 config_object = ConfigParser()
 config_object.read("config.ini")
 userinfo = config_object["USERINFO"]
 
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+driver = webdriver.Chrome()
 driver.implicitly_wait(3)
 driver.get('https://kite.zerodha.com/')
 driver.find_element(By.XPATH, "//input[@id='userid']").send_keys(userinfo.get("userid"))
