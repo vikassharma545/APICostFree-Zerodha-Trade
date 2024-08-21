@@ -8,7 +8,7 @@
 * requests >= 2.28.1 ``` pip install requests```
 * pyotp >= 2.8.0 ```pip install pyotp```
 * pandas >= 1.5.0 ```pip install pandas```
-* selenium >= 4.10.0 ```pip install selenium```
+* selenium == 4.23.1 ```pip install selenium```
 * webdriver_manager >= 4.10.0 ```pip install selenium```
 
 ## Requirments
